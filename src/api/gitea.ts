@@ -28,10 +28,6 @@ export function clearRepoCache(): void {
 // Detect if we're in production build
 const isProduction = import.meta.env.PROD;
 
-// Store for production proxy
-let storedGiteaUrl = '';
-let storedToken = '';
-
 /**
  * Registers the Gitea URL and sets up the appropriate base URL for API calls.
  * - Dev mode: Routes through Vite proxy at /gitea-api/* (no CORS issues)
@@ -39,12 +35,6 @@ let storedToken = '';
  */
 export async function initClient(baseUrl: string, token: string): Promise<void> {
   const cleanBaseUrl = baseUrl.replace(/\/$/, '');
-  
-  // In production, store for proxy headers
-  if (isProduction) {
-    storedGiteaUrl = cleanBaseUrl;
-    storedToken = token;
-  }
 
   // Headers: always include auth, plus Gitea URL + token in prod for the proxy
   const headers: Record<string, string> = {
