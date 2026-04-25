@@ -1,6 +1,5 @@
 import { format, eachDayOfInterval, parseISO, differenceInHours } from 'date-fns';
 import type {
-  GiteaCommit,
   GiteaPullRequest,
   GiteaReview,
   DailyActivity,
