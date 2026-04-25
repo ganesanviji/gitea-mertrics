@@ -25,33 +25,44 @@ export function clearRepoCache(): void {
   repoDataCache.clear();
 }
 
+// Detect if we're in production build
+const isProduction = import.meta.env.PROD;
+
+// Store for production proxy
+let storedGiteaUrl = '';
+let storedToken = '';
+
 /**
- * Registers the Gitea URL with the Vite dev-server proxy (avoids CORS).
- * All API traffic routes through /gitea-api/* on localhost.
+ * Registers the Gitea URL and sets up the appropriate base URL for API calls.
+ * - Dev mode: Routes through Vite proxy at /gitea-api/* (no CORS issues)
+ * - Prod mode: Uses Vercel serverless function at /api/proxy with headers
  */
-async function registerProxy(baseUrl: string): Promise<void> {
-  try {
-    await fetch('/dev/set-gitea-url', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: baseUrl }),
-    });
-  } catch {
-    // Non-fatal – proxy registration only works in dev
-  }
-}
-
 export async function initClient(baseUrl: string, token: string): Promise<void> {
-  // Wait for proxy registration before any API calls (avoids race condition)
-  await registerProxy(baseUrl);
+  const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+  
+  // In production, store for proxy headers
+  if (isProduction) {
+    storedGiteaUrl = cleanBaseUrl;
+    storedToken = token;
+  }
 
-  // Use relative /gitea-api base — routed through Vite proxy, no CORS
+  // Headers: always include auth, plus Gitea URL + token in prod for the proxy
+  const headers: Record<string, string> = {
+    Authorization: `token ${token}`,
+    'Content-Type': 'application/json',
+  };
+  
+  if (isProduction) {
+    headers['X-Gitea-Url'] = cleanBaseUrl;
+    headers['X-Gitea-Token'] = token;
+  }
+
+  // Use relative /gitea-api base in dev (Vite proxy), absolute URL in prod
+  const baseURL = isProduction ? '/api/proxy' : '/gitea-api/api/v1';
+  
   client = axios.create({
-    baseURL: '/gitea-api/api/v1',
-    headers: {
-      Authorization: `token ${token}`,
-      'Content-Type': 'application/json',
-    },
+    baseURL,
+    headers,
   });
 }
 

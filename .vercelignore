@@ -1,0 +1,9 @@
+node_modules
+.git
+*.md
+.env.local
+.env.*.local
+api/*.ts
+!api/proxy.ts
+tsconfig*.json
+!api/tsconfig.json
