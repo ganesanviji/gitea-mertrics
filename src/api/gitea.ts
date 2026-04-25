@@ -26,28 +26,31 @@ export function clearRepoCache(): void {
 }
 
 /**
- * Registers the Gitea URL with the Vite dev-server proxy (avoids CORS).
- * All API traffic routes through /gitea-api/* on localhost.
+ * Registers the Gitea URL with the backend proxy service so it knows
+ * which upstream Gitea instance to forward requests to.
  */
 async function registerProxy(baseUrl: string): Promise<void> {
+  const proxyUrl = import.meta.env.VITE_API_PROXY_URL || '/api';
   try {
-    await fetch('/dev/set-gitea-url', {
+    await fetch(`${proxyUrl}/dev/set-gitea-url`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: baseUrl }),
     });
   } catch {
-    // Non-fatal – proxy registration only works in dev
+    // Non-fatal – best-effort registration
   }
 }
 
 export async function initClient(baseUrl: string, token: string): Promise<void> {
-  // Wait for proxy registration before any API calls (avoids race condition)
+  // Register the Gitea URL with the backend proxy before making any API calls
   await registerProxy(baseUrl);
 
-  // Use relative /gitea-api base — routed through Vite proxy, no CORS
+  const proxyUrl = import.meta.env.VITE_API_PROXY_URL || '/api';
+
+  // Route all Gitea API traffic through the backend proxy service (no CORS)
   client = axios.create({
-    baseURL: '/gitea-api/api/v1',
+    baseURL: `${proxyUrl}/gitea-api/api/v1`,
     headers: {
       Authorization: `token ${token}`,
       'Content-Type': 'application/json',
